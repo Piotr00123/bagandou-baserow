@@ -1,0 +1,170 @@
+{
+  "name": "Photo to Baserow Record via AI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "odk-karta/submission",
+        "responseMode": "lastNode",
+        "responseCode": 201,
+        "options": {}
+      },
+      "id": "6e742d61-ac0a-4200-bda2-f73813b470ad",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        208
+      ],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "907c89a4-d680-447e-944c-99fe0a681e73",
+      "name": "Wait on Gemini Error",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        512
+      ],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Sprawdzamy bezpiecznie dane wejściowe przekazane przez klocek Merge\nif (!item || !item.json) {\n  return { json: { \"status\": \"brak danych wejściowych w cache\" } };\n}\n\n// Pobieramy tekst wyjściowy z AI Agenta\nlet rawText = item.json.output;\nlet parsedJson = {};\n\n// Parsowanie tekstu JSON z AI Agent\ntry {\n  if (typeof rawText === 'string') {\n    let cleanText = rawText;\n    if (cleanText.includes('```')) {\n      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();\n    }\n    parsedJson = JSON.parse(cleanText);\n  } else {\n    parsedJson = rawText || {};\n  }\n} catch (e) {\n  parsedJson = { \"Numer\": \"BLAD\", \"Nazwisko\": \"BŁĄD PARSOWANIA\" };\n}\n\n// OSTATECZNA, BEZWZGLĘDNA NAPRAWA LITERY M NA MIESIĄC 11 (np. \"28. M. 2009\" -> \"28.11.2009\")\nconst naprawMiesiaceIM = (tekstDaty) => {\n  if (!tekstDaty) return tekstDaty;\n  let str = String(tekstDaty).trim();\n  \n  // Usuwamy zbędne spacje wokół kropek i liter, które generuje AI\n  str = str.replace(/\\s+\\.\\s+/g, '.').replace(/\\s+\\./g, '.').replace(/\\.\\s+/g, '.');\n  \n  // Zamieniamy warianty z literą M (np. \".M.\", \".M \", \" M.\") na czysty miesiąc 11\n  str = str.replace(/\\.M\\./gi, '.11.').replace(/\\.M\\b/gi, '.11').replace(/\\bM\\./gi, '11.');\n  \n  // Zabezpieczenie dla spacji zamiast kropek (np. \"28 M 2009\")\n  str = str.replace(/\\bM\\b/gi, '11');\n  \n  return str.trim();\n};\n\n// AUTOMATYCZNA KOREKTA ZNIEKSZTAŁCONEGO PISMA ROKU (np. 1888/1988 -> 1999)\nconst naprawStulecie = (tekstDaty) => {\n  if (!tekstDaty) return tekstDaty;\n  let str = String(tekstDaty).trim();\n  if (str.endsWith('1888') || str.endsWith('1988')) {\n    return str.replace(/1888/g, '1999').replace(/1988/g, '1999');\n  }\n  if (/\\b18(\\d{2})\\b/.test(str)) {\n    return str.replace(/\\b18(\\d{2})\\b/g, '19\\$1');\n  }\n  return str;\n};\n\n// Uruchamiamy bezbłędne czyszczenie dla wszystkich pól dat\nif (parsedJson.Data_Urodzenia) {\n  parsedJson.Data_Urodzenia = naprawMiesiaceIM(parsedJson.Data_Urodzenia);\n  parsedJson.Data_Urodzenia = naprawStulecie(parsedJson.Data_Urodzenia);\n}\nif (parsedJson.Data_Chrztu) {\n  parsedJson.Data_Chrztu = naprawMiesiaceIM(parsedJson.Data_Chrztu);\n  parsedJson.Data_Chrztu = naprawStulecie(parsedJson.Data_Chrztu);\n}\nif (parsedJson.Data_Komunii) {\n  parsedJson.Data_Komunii = naprawMiesiaceIM(parsedJson.Data_Komunii);\n  parsedJson.Data_Komunii = naprawStulecie(parsedJson.Data_Komunii);\n}\nif (parsedJson.Data_Bierzmowania) {\n  parsedJson.Data_Bierzmowania = naprawMiesiaceIM(parsedJson.Data_Bierzmowania);\n  parsedJson.Data_Bierzmowania = naprawStulecie(parsedJson.Data_Bierzmowania);\n}\n\n// Naprawa poszatkowanych nazwisk (linie pomocnicze na kartach)\nif (parsedJson.Nazwisko) {\n  parsedJson.Nazwisko = String(parsedJson.Nazwisko).replace(/\\s+/g, '').replace(/\\./g, '').trim();\n}\n\n// 3. OSTATECZNE ZABEZPIECZENIE ZNAKÓW PRZED WYSYŁKĄ HTTP DO BASEROW\nfor (let key in parsedJson) {\n  if (typeof parsedJson[key] === 'string') {\n    parsedJson[key] = parsedJson[key]\n      .replace(/\"/g, '\\\\\"')     \n      .replace(/[\\r\\n]+/g, ' ')   \n      .trim();\n  }\n}\n\n// 4. Szukamy zdjęcia przekazanego z klocka Merge i zmieniamy mu nazwę\nlet wynikBinary = undefined;\nif (item.binary) {\n  const binaryKeys = Object.keys(item.binary);\n  const jpgKey = binaryKeys.find(key => key.toLowerCase().endsWith('.jpg') || key.toLowerCase().endsWith('.jpeg'));\n  \n  if (jpgKey && item.binary[jpgKey]) {\n    let fotoData = { ...item.binary[jpgKey] };\n    fotoData.fileName = \"Karta_\" + (parsedJson.Numer || 'BRAK') + \".jpg\";\n    wynikBinary = {\n      foto: fotoData\n    };\n  }\n}\n\nreturn {\n  json: parsedJson,\n  binary: wynikBinary\n};\n"
+      },
+      "id": "85c91950-fac8-41ea-8fa6-97145878cbb4",
+      "name": "Format Data & Rename File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost/api/user-files/upload-file/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Host",
+              "value": "localhost:8080"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "foto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2cd0b6f3-4b79-449d-b83c-cf33a23fd00a",
+      "name": "Upload Photo to Baserow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        80,
+        224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost/api/database/rows/table/300/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Host",
+              "value": "localhost:8080"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"field_2664\": \"{{ $('Format Data & Rename File').item.json.Nazwisko || '' }}\",\n  \"field_2665\": \"{{ $('Format Data & Rename File').item.json.Imie || '' }}\",\n  \"field_2673\": \"{{ $('Format Data & Rename File').item.json.Data_Urodzenia || '' }}\",\n  \"field_2676\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Urodzenia || '' }}\",\n  \"field_2667\": \"{{ $('Format Data & Rename File').item.json.Ojciec || '' }}\",\n  \"field_2668\": \"{{ $('Format Data & Rename File').item.json.Matka || '' }}\",\n  \"field_2669\": \"{{ $('Format Data & Rename File').item.json.Chrzestni || '' }}\",\n  \"field_2670\": \"{{ $('Format Data & Rename File').item.json.Numer || '' }}\",\n  \"field_2666\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Chrztu || '' }}\",\n  \"field_2671\": \"{{ $('Format Data & Rename File').item.json.Szafarz || '' }}\",\n  \"field_2674\": \"{{ $('Format Data & Rename File').item.json.Data_Chrztu || '' }}\",\n  \"field_8109\": \"{{ $('Format Data & Rename File').item.json.Data_Komunii || '' }}\",\n  \"field_8111\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Komunii || '' }}\",\n  \"field_8110\": \"{{ $('Format Data & Rename File').item.json.Data_Bierzmowania || '' }}\",\n  \"field_8112\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Bierzmowania || '' }}\",\n  \"field_2672\": \"{{ $('Format Data & Rename File').item.json.Uwagi || '' }}\",\n  \"field_2675\": [\n    {\n      \"name\": \"{{ $json.name }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "id": "24a2995f-8980-4ec7-be75-e9385d60fc5d",
+      "name": "Create Parishioner Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        288,
+        224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIALS_ID",
+          "name": "Header Auth account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Data & Rename File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data & Rename File": {
+      "main": [
+        [
+          {
+            "node": "Upload Photo to Baserow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Photo to Baserow": {
+      "main": [
+        [
+          {
+            "node": "Create Parishioner Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "da742c38-8fa1-4cf1-97b4-18fa266cd9f2"
+}

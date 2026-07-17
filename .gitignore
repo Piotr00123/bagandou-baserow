@@ -1,0 +1,45 @@
+# ====================================================================
+# UNIWERSALNY .GITIGNORE DLA STOSU DOCKER / EDGE COMPONENT (BAGANDOU)
+# ====================================================================
+
+# --- Prywatne dane kontenerów i bazy danych ---
+# Blokuje wszystkie foldery zaczynające się od "dane_" oraz standardowe katalogi baz danych
+dane_*/
+data/
+db_data/
+postgres_data/
+
+# --- Pliki konfiguracyjne i sekrety ---
+# Ukrywa wszelkie pliki środowiskowe zawierające hasła i tokeny
+.env
+.env.*
+!.env.example
+
+# --- Logi i pliki tymczasowe kontenerów ---
+*.log
+logs/
+*.pid
+
+# --- Archiwa, kopie zapasowe i zrzuty danych ---
+# Blokuje ciężkie pliki backupów, których nie wrzuca się do repozytorium kodu
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.gz
+*.sql
+
+# --- Śmieci systemowe i sieciowe ---
+# Blokuje metadane Windows (w tym WSL), macOS oraz miniatury
+*:Zone.Identifier
+*Zone.Identifier
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Śmieci edytorów kodu (IDE) ---
+# Ignoruje foldery konfiguracyjne popularnych edytorów (np. VS Code)
+.vscode/
+.idea/
+*.suo
+*.ntvs*

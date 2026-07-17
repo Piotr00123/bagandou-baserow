@@ -1,0 +1,174 @@
+networks:
+  bagandou_network:
+    driver: bridge
+
+volumes:
+  stirling_training_data:
+  cups_config:
+
+services:
+  homepage:
+    image: nginx:alpine
+    container_name: bagandou_homepage
+    ports:
+      - "80:80"
+    volumes:
+      - ./homer-assets:/usr/share/nginx/html
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  baserow:
+    image: baserow/baserow:2.2.0
+    container_name: baserow_bagandou
+    ports:
+      - "8080:80"
+    environment:
+      BASEROW_PUBLIC_URL: "${BASEROW_URL}"
+    volumes:
+      - ./dane_baserow:/baserow/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  stirling-pdf:
+    image: frooodle/s-pdf:latest
+    container_name: bagandou_stirling_pdf
+    ports:
+      - "8081:8080"
+    environment:
+      - APP_LOCALE=pl_PL
+      - SECURITY_ENABLE_LOGIN=false
+    volumes:
+      - stirling_training_data:/usr/share/tessdata
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  cups:
+    image: ydkn/cupsd:latest
+    container_name: bagandou_cups
+    ports:
+      - "631:631"
+    environment:
+      - CUPS_ADMIN_ADMIN=admin
+      - CUPS_ADMIN_PASSWORD=${CUPS_ADMIN_PASSWORD}
+    volumes:
+      - cups_config:/etc/cups
+    privileged: true
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  bagandou-db:
+    image: postgres:15-alpine
+    container_name: bagandou_postgres
+    environment:
+      - POSTGRES_USER=bagandou_admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=umami_db
+    volumes:
+      - ./dane_postgres:/var/lib/postgresql/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: bagandou_umami
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://bagandou_admin:${POSTGRES_PASSWORD}@bagandou-db:5432/umami_db
+      - APP_SECRET=${UMAMI_APP_SECRET}
+    depends_on:
+      - bagandou-db
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: bagandou_uptime_kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./dane_kuma:/app/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: bagandou_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      - N8N_HOST=${N8N_DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=https://${N8N_DOMAIN}/
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - EXCLUSIVE_NODE_EXECUTION=true
+      - N8N_EXECUTIONS_DATA_PRUNE=true
+      - N8N_EXECUTIONS_DATA_MAX_AGE=72
+      - N8N_DEFAULT_BINARY_DATA_MODE=default
+    volumes:
+      - ./dane_n8n:/home/node/.n8n
+    networks:
+      - bagandou_network
+    depends_on:
+      - bagandou-db
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bagandou_cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - bagandou_network
+    depends_on:
+      - n8n
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m

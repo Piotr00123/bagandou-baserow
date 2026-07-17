@@ -1,0 +1,182 @@
+name: bagandou
+
+services:
+  # --- 1. PARISH REGISTER / KANCELARIA I EWIDENCJA ---
+  # EN: Baserow local database engine for parish registers, books, and core administrative records
+  # PL: Lokalny silnik bazy danych Baserow do prowadzenia ewidencji, ksiąg i rejestrów kancelarii parafialnej
+  baserow:
+    container_name: bagandou_baserow
+    image: baserow/baserow:latest
+    env_file:
+      - .env
+    environment:
+      BASEROW_PUBLIC_URL: "${BASEROW_URL}"
+      BASEROW_BACKEND_CONTAINER_SUB_URL: "http://bagandou_baserow:80"
+      PRIVATE_BACKEND_URL: "http://bagandou_baserow:80"
+      BASEROW_EXTRA_ALLOWED_HOSTS: "bagandou_baserow,localhost,127.0.0.1"
+      WEB_FRONTEND_SSL_METRICS_PORT: "9180"
+      EMAIL_SMTP: "True"
+      EMAIL_SMTP_HOST: "${EMAIL_SMTP_HOST}"
+      EMAIL_SMTP_PORT: "${EMAIL_SMTP_PORT}"
+      EMAIL_SMTP_USER: "${EMAIL_SMTP_USER}"
+      EMAIL_SMTP_PASSWORD: "${EMAIL_SMTP_PASSWORD}"
+      EMAIL_SMTP_USE_TLS: "${EMAIL_SMTP_USE_TLS}"
+      FROM_EMAIL: "${FROM_EMAIL}"
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./dane_baserow:/baserow/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 2. AUTOMATION ENGINE / SILNIK AUTOMATYZACJI ---
+  # EN: n8n workflow pipeline manager handling offline data synchronization tasks
+  # PL: Platforma n8n jako centralny silnik przepływów danych i synchronizacji off-line
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: bagandou_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      - N8N_HOST=${N8N_DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_TUNNEL=false
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - WEBHOOK_URL=https://${NGROK_DOMAIN}/
+      - N8N_COMMUNITY_NODES_ENABLED=true
+    volumes:
+      - ./dane_n8n:/home/node/.n8n
+    networks:
+      - bagandou_network
+    depends_on:
+      - postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # --- 3. INGRESS TUNNEL / TUNEL SIECIOWY ---
+  # EN: Automated ngrok network agent delivering secure ingress point for mobile app endpoints
+  # PL: Automatyczny agent ngrok wystawiający stały, bezpieczny punkt wejścia dla webhooków z telefonu
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: bagandou_ngrok
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - WEBHOOK_URL=https://${NGROK_DOMAIN}/
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http bagandou_n8n:5678 --url=https://${NGROK_DOMAIN} --log=stdout
+    networks:
+      - bagandou_network
+    depends_on:
+      - n8n
+
+  # --- 4. CENTRAL PANEL / PANEL STARTOWY ---
+  # EN: Lightweight Nginx server for the central offline dashboard (bilingual layout, SVG anchors)
+  # PL: Lekki serwer Nginx dla centralnego panelu startowego offline (kodowanie SVG, jasny layout)
+  homepage:
+    image: nginx:alpine
+    container_name: bagandou_homepage
+    ports:
+      - "80:80"
+    volumes:
+      - ./homer-assets:/usr/share/nginx/html
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 5. DOCUMENTATION SYSTEM / EDYCJA I OCR ---
+  # EN: Stirling-PDF engine for offline document manipulation, digital signing, and multimodal OCR
+  # PL: Silnik Stirling-PDF do offline edycji dokumentów, podpisów cyfrowych oraz modułu OCR ze zdjęć
+  stirling-pdf:
+    image: frooodle/s-pdf:latest
+    container_name: bagandou_stirling_pdf
+    ports:
+      - "8081:8080"
+    environment:
+      - APP_LOCALE=pl_PL
+      - SECURITY_ENABLE_LOGIN=false
+    volumes:
+      - stirling_training_data:/usr/share/tessdata
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 6. PRINT SERVER / SERWER WYDRUKU ---
+  # EN: CUPS wireless print server for managing hardware reports from laptops and smartphones
+  # PL: Centralny serwer wydruków bezprzewodowych CUPS dla laptopów i smartfonów w Kancelarii
+  cups:
+    image: olbat/cupsd:latest
+    container_name: bagandou_cups
+    ports:
+      - "631:631"
+    environment:
+      - CUPS_ADMIN_ADMIN=admin
+      - CUPS_ADMIN_PASSWORD=${CUPS_ADMIN_PASSWORD}
+    volumes:
+      - cups_config:/etc/cups
+    privileged: true
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 7. POWER & NETWORK WATCHDOG / STRAŻNIK SIECI ---
+  # EN: Uptime Kuma agent monitoring Starlink status, local power line grid, and dispatching alerts
+  # PL: Uptime Kuma jako automatyczny strażnik zasilania miejskiego i statusu sieci Starlink
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: bagandou_uptime_kuma
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./dane_kuma:/app/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 8. LOCAL ANALYTICS / STATYSTYKI PRACY ---
+  # EN: Umami self-hosted analytics engine for tracking dashboard data without external cloud exposure
+  # PL: Lokalna, w pełni anonimowa instancja Umami Analytics do zliczania ruchu w sieci lokalnej
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: bagandou_umami
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://bagandou_admin:${POSTGRES_PASSWORD}@postgres:5432/umami_db
+      - APP_SECRET=${UMAMI_APP_SECRET}
+    depends_on:
+      - postgres
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+  # --- 9. CORE DATABASE / CENTRALNA BAZA DANYCH ---
+  # EN: PostgreSQL database server for application statistics
+  # PL: Serwer bazy danych PostgreSQL dla statystyk aplikacji
+  postgres:
+    image: postgres:15-alpine
+    container_name: bagandou_postgres
+    environment:
+      - POSTGRES_USER=bagandou_admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=umami_db
+    volumes:
+      - ./dane_postgres:/var/lib/postgresql/data
+    networks:
+      - bagandou_network
+    restart: unless-stopped
+
+networks:
+  bagandou_network:
+    driver: bridge
+
+volumes:
+  stirling_training_data:
+  cups_config:

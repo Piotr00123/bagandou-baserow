@@ -1,0 +1,47 @@
+title: "Kancelaria Bagandou"
+subtitle: "Cyfrowe Serce Administracyjne"
+logo: "" # Czyścimy logo główne, by nie szukało popsutego pliku
+
+header: true
+footer: '<small>Strategia: Safety First | System operacyjny offline</small><script defer src="http://127.0.0" data-website-id="7953d365-30bf-4e49-8844-f48dd1719237"></script>'
+
+columns: "3"
+connectivity_check: false
+pwa: false
+
+services:
+  - name: "Aplikacje Biurowe"
+    icon: "fas fa-briefcase"
+    items:
+      - name: "Ewidencja Baserow"
+        icon: "fas fa-database" # Wbudowana ikona bazy danych
+        subtitle: "Kartoteki medyczne i spis uczniów"
+        url: "http://localhost:8080"
+        target: "_blank"
+
+      - name: "System Dokumentacji"
+        icon: "fas fa-file-pdf" # Wbudowana ikona pliku PDF
+        subtitle: "Edytor PDF, wnioski i OCR ze zdjęć"
+        url: "http://localhost:8081"
+        target: "_blank"
+
+      - name: "Serwer Wydruku CUPS"
+        icon: "fas fa-print" # Wbudowana ikona drukarki
+        subtitle: "Drukowanie bezprzewodowe z telefonu/laptopa"
+        url: "http://localhost:631"
+        target: "_blank"
+
+  - name: "Nadzór i Bezpieczeństwo"
+    icon: "fas fa-shield-alt"
+    items:
+      - name: "Strażnik Uptime Kuma"
+        icon: "fas fa-heartbeat" # Wbudowana ikona monitoringu/pulsu
+        subtitle: "Monitoring zasilania i sieci Starlink"
+        url: "http://localhost:3001"
+        target: "_blank"
+
+      - name: "Statystyki Umami"
+        icon: "fas fa-chart-bar" # Wbudowana ikona wykresów/statystyk
+        subtitle: "Monitor czasu pracy biura"
+        url: "http://localhost:3000"
+        target: "_blank"

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://w3.org" 
+      xmlns:h="http://w3.org" 
+      xmlns:jr="http://openrosa.org" 
+      xmlns:odk="http://opendatakit.org" 
+      xmlns:orx="http://openrosa.org" 
+      xmlns:xsd="http://w3.org">
+  <h:head>
+    <h:title>Cyfryzacja Karty Bagandou</h:title>
+    <model>
+      <instance>
+        <data id="odk-karta" version="2026071101">
+          <zdjecie_karty />
+        </data>
+      </instance>
+      <!-- bind zachowuje wymaganie zrobienia zdjęcia (required) -->
+      <bind nodeset="/data/zdjecie_karty" type="binary" required="true()" />
+    </model>
+  </h:head>
+  <h:body>
+    <!-- odk:max-pixels wymusza bezpieczną kompresję na smartfonie, chroniąc RAM Twojego RPi 5 -->
+    <upload mediatype="image/*" ref="/data/zdjecie_karty" odk:max-pixels="2048">
+      <label>Zrób zdjęcie papierowej karty beneficjenta:</label>
+    </upload>
+  </h:body>
+</html>
