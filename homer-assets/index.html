@@ -6,10 +6,13 @@
     <title>Kancelaria Bagandou – Panel Usług Administracyjnych</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; color: #1f2937; margin: 0; padding: 40px; text-align: center; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         h1 { font-size: 2.25rem; color: #1e3a8a; margin-bottom: 5px; font-weight: bold; }
         .subtitle { color: #6b7280; font-size: 1rem; margin-bottom: 50px; }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; max-width: 800px; margin: 0 auto; }
+        
+        /* Zmiana na 3 kolumny dla uzyskania idealnego balansu (6 aplikacji) */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; max-width: 1100px; margin: 0 auto; }
+        
         .card { background: #ffffff; padding: 35px 25px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border: 1px solid #e5e7eb; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
         .icon-wrapper { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
@@ -17,12 +20,13 @@
         
         /* Kolorystyka dopasowana do aplikacji */
         .icon-baserow { fill: #06b6d4; }
+        .icon-n8n { fill: #ff6d5a; }
         .icon-stirling { fill: #ef4444; }
         .icon-cups { fill: #3b82f6; }
         .icon-kuma { fill: #22c55e; }
         .icon-umami { fill: #a855f7; }
         
-        .info h3 { margin: 0; font-size: 1.2rem; color: #111827; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info h3 { margin: 0; font-size: 1.15rem; color: #111827; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
         .info p { margin: 10px 0 0 0; font-size: 0.9rem; color: #6b7280; line-height: 1.4; }
         footer { 
             margin-top: 60px; 
@@ -33,8 +37,8 @@
             width: 100%;
         }
     </style>
-    <!-- KOD ŚLEDZENIA UMAMI -->
-    <script defer src="http://localhost:3000/script.js" data-website-id="7953d365-30bf-4e49-8844-f48dd1719237"></script>
+    <!-- Zoptymalizowany pod kątem offline/miksowania środowisk kod śledzenia Umami -->
+    <script defer src="/script.js" data-website-id="7953d365-30bf-4e49-8844-f48dd1719237"></script>
 </head>
 <body>
     <div class="container">
@@ -53,7 +57,18 @@
                 </div>
             </a>
 
-            <!-- 2. STIRLING-PDF -->
+            <!-- 2. N8N (NOWOŚĆ) -->
+            <a href="http://localhost:5678" target="_blank" class="card">
+                <div class="icon-wrapper icon-n8n">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="6" r="3"></circle><circle cx="18" cy="18" r="3"></circle><line x1="6" y1="9" x2="6" y2="15"></line><line x1="9" y1="6" x2="15" y2="6"></line><line x1="9" y1="18" x2="15" y2="18"></line><line x1="18" y1="9" x2="18" y2="15"></line></svg>
+                </div>
+                <div class="info">
+                    <h3>Automatyzacja n8n</h3>
+                    <p>Integracja formularzy ODK, sztucznej inteligencji AI oraz wysyłki powiadomień</p>
+                </div>
+            </a>
+
+            <!-- 3. STIRLING-PDF -->
             <a href="http://localhost:8081" target="_blank" class="card">
                 <div class="icon-wrapper icon-stirling">
                     <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -64,7 +79,7 @@
                 </div>
             </a>
 
-            <!-- 3. CUPS -->
+            <!-- 4. CUPS -->
             <a href="http://localhost:631" target="_blank" class="card">
                 <div class="icon-wrapper icon-cups">
                     <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -75,7 +90,7 @@
                 </div>
             </a>
 
-            <!-- 4. UPTIME KUMA -->
+            <!-- 5. UPTIME KUMA -->
             <a href="http://localhost:3001" target="_blank" class="card">
                 <div class="icon-wrapper icon-kuma">
                     <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -86,8 +101,8 @@
                 </div>
             </a>
 
-            <!-- 5. UMAMI -->
-            <a href="http://localhost:3000" target="_blank" class="card" style="grid-column: span 2;">
+            <!-- 6. UMAMI -->
+            <a href="http://localhost:3000" target="_blank" class="card">
                 <div class="icon-wrapper icon-umami">
                     <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -100,9 +115,9 @@
                     <p>Lokalna i anonimowa analityka czasu pracy systemów biurowych</p>
                 </div>
             </a>
-        </div> <!-- TO JEST BRAKUJĄCE ZAMKNIĘCIE SIATKI GRID -->
+        </div>
 
         <footer>Strategia: Safety First | System operacyjny offline</footer>
-    </div> <!-- Zamknięcie głównego kontenera container -->
+    </div>
 </body>
 </html>
