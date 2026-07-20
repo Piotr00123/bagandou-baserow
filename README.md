@@ -37,7 +37,7 @@ The environment is structured using localized Bind Mounts (`./dane_*`) to ensure
 
 ## 💾 Data Migration, Workflow & Schema Replication
 
-Since persistence directories are explicitly ignored by version control to maintain data privacy, you can replicate either your entire verified database via hardware storage or import templates directly through version-controlled structural files (`baserow_schema.json` and `n8n_workflow.json`).
+Since persistence directories are explicitly ignored by version control to maintain data privacy, you can replicate either your entire verified database via hardware storage or import templates directly through version-controlled structural files (`struktura_baserow.sql` and `n8n_workflow.json`).
 
 ### 1. Exporting the Source Stack Data (On WSL2/Host)
 Before copying, bring down the active containers to safely close all database locks, then compress the live data volume:
@@ -109,7 +109,7 @@ To repozytorium zawiera ujednolicony, gotowy do wdrożenia produkcyjnego szablon
 
 ## 💾 Migracja, Automatyzacja i Odtwarzanie Struktur
 
-Ponieważ katalogi z danymi produkcyjnymi są zablokowane przed wysyłką na GitHub, możesz odtworzyć system na Malince za pomocą fizycznego nośnika lub zaimportować gotowe schematy bez danych z repozytorium (`baserow_schema.json` oraz `n8n_workflow.json`).
+Ponieważ katalogi z danymi produkcyjnymi są zablokowane przed wysyłką na GitHub, możesz odtworzyć system na Malince za pomocą fizycznego nośnika lub zaimportować gotowe schematy bez danych z repozytorium (`struktura_baserow.sql` oraz `n8n_workflow.json`).
 
 ### 1. Eksportowanie danych (Na WSL2 / Komputerze testowym)
 Przed kopiowaniem wyłącz kontenery, aby bezpiecznie zamknąć i zapisać pliki bazy danych, a następnie spakuj folder:
