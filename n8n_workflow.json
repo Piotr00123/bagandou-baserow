@@ -1,0 +1,477 @@
+{
+  "name": "Photo to Baserow Record via AI without duplicates - all 22 data",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "odk-karta/submission",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "06a8ae37-d060-4087-9fc0-e906d1952109",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        208
+      ],
+      "webhookId": "b286d367-b692-48fc-aa63-84fab3b900bd"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "5d00e937-1215-49a9-8f02-25d90eb193ed",
+      "name": "Wait on Gemini Error",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        480
+      ],
+      "webhookId": "361af0a7-2738-40ab-8e1c-82b3969c01ab"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Sprawdzamy bezpiecznie dane wejściowe przekazane przez klocek Merge\nif (!item || !item.json) {\n  return { json: { \"status\": \"brak danych wejściowych w cache\" } };\n}\n\n// Pobieramy tekst wyjściowy z AI Agenta\nlet rawText = item.json.output;\nlet parsedJson = {};\n\n// Parsowanie tekstu JSON z AI Agent\ntry {\n  if (typeof rawText === 'string') {\n    let cleanText = rawText;\n    if (cleanText.includes('```')) {\n      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();\n    }\n    parsedJson = JSON.parse(cleanText);\n  } else {\n    parsedJson = rawText || {};\n  }\n} catch (e) {\n  parsedJson = { \"Numer\": \"BLAD\", \"Nazwisko\": \"BŁĄD PARSOWANIA\" };\n}\n\n// OSTATECZNA, BEZWZGLĘDNA NAPRAWA LITERY M NA MIESIĄC 11 (np. \"28. M. 2009\" -> \"28.11.2009\")\nconst naprawMiesiaceIM = (tekstDaty) => {\n  if (!tekstDaty) return tekstDaty;\n  let str = String(tekstDaty).trim();\n  \n  // Usuwamy zbędne spacje wokół kropek i liter, które generuje AI\n  str = str.replace(/\\s+\\.\\s+/g, '.').replace(/\\s+\\./g, '.').replace(/\\.\\s+/g, '.');\n  \n  // Zamieniamy warianty z literą M (np. \".M.\", \".M \", \" M.\") na czysty miesiąc 11\n  str = str.replace(/\\.M\\./gi, '.11.').replace(/\\.M\\b/gi, '.11').replace(/\\bM\\./gi, '11.');\n  \n  // Zabezpieczenie dla spacji zamiast kropek (np. \"28 M 2009\")\n  str = str.replace(/\\bM\\b/gi, '11');\n  \n  return str.trim();\n};\n\n// AUTOMATYCZNA KOREKTA ZNIEKSZTAŁCONEGO PISMA ROKU (np. 1888/1988 -> 1999)\nconst naprawStulecie = (tekstDaty) => {\n  if (!tekstDaty) return tekstDaty;\n  let str = String(tekstDaty).trim();\n  if (str.endsWith('1888') || str.endsWith('1988')) {\n    return str.replace(/1888/g, '1999').replace(/1988/g, '1999');\n  }\n  if (/\\b18(\\d{2})\\b/.test(str)) {\n    return str.replace(/\\b18(\\d{2})\\b/g, '19\\$1');\n  }\n  return str;\n};\n\n// Uruchamiamy bezbłędne czyszczenie dla wszystkich pól dat (w tym nowo dodanej Data_Slubu)\nif (parsedJson.Data_Urodzenia) {\n  parsedJson.Data_Urodzenia = naprawMiesiaceIM(parsedJson.Data_Urodzenia);\n  parsedJson.Data_Urodzenia = naprawStulecie(parsedJson.Data_Urodzenia);\n}\nif (parsedJson.Data_Chrztu) {\n  parsedJson.Data_Chrztu = naprawMiesiaceIM(parsedJson.Data_Chrztu);\n  parsedJson.Data_Chrztu = naprawStulecie(parsedJson.Data_Chrztu);\n}\nif (parsedJson.Data_Komunii) {\n  parsedJson.Data_Komunii = naprawMiesiaceIM(parsedJson.Data_Komunii);\n  parsedJson.Data_Komunii = naprawStulecie(parsedJson.Data_Komunii);\n}\nif (parsedJson.Data_Bierzmowania) {\n  parsedJson.Data_Bierzmowania = naprawMiesiaceIM(parsedJson.Data_Bierzmowania);\n  parsedJson.Data_Bierzmowania = naprawStulecie(parsedJson.Data_Bierzmowania);\n}\nif (parsedJson.Data_Slubu) {\n  parsedJson.Data_Slubu = naprawMiesiaceIM(parsedJson.Data_Slubu);\n  parsedJson.Data_Slubu = naprawStulecie(parsedJson.Data_Slubu);\n}\n\n// Naprawa poszatkowanych nazwisk (linie pomocnicze na kartach)\nif (parsedJson.Nazwisko) {\n  parsedJson.Nazwisko = String(parsedJson.Nazwisko).replace(/\\s+/g, '').replace(/\\./g, '').trim();\n}\n\n// KONWERSJA NUMERU KARTY NA TYP LICZBOWY (Naprawa sortowania w bazie danych)\nif (parsedJson.Numer) {\n  let czystyNumer = parseInt(String(parsedJson.Numer).replace(/\\s+/g, ''), 10);\n  parsedJson.Numer = isNaN(czystyNumer) ? null : czystyNumer;\n}\n\n// 3. OSTATECZNE ZABEZPIECZENIE ZNAKÓW PRZED WYSYŁKĄ HTTP (działa automatycznie na wszystkie nowe pola tekstowe)\nfor (let key in parsedJson) {\n  if (typeof parsedJson[key] === 'string') {\n    parsedJson[key] = parsedJson[key]\n      .replace(/\"/g, '\\\\\"')     \n      .replace(/[\\r\\n]+/g, ' ')   \n      .trim();\n  }\n}\n\n// 4. Szukamy zdjęcia przekazanego z klocka Merge i zmieniamy mu nazwę\nlet wynikBinary = undefined;\nif (item.binary) {\n  const binaryKeys = Object.keys(item.binary);\n  const jpgKey = binaryKeys.find(key => key.toLowerCase().endsWith('.jpg') || key.toLowerCase().endsWith('.jpeg'));\n  \n  if (jpgKey && item.binary[jpgKey]) {\n    let fotoData = { ...item.binary[jpgKey] };\n    fotoData.fileName = \"Karta_\" + (parsedJson.Numer || 'BRAK') + \".jpg\";\n    wynikBinary = {\n      foto: fotoData\n    };\n  }\n}\n\nreturn {\n  json: parsedJson,\n  binary: wynikBinary\n};\n"
+      },
+      "id": "17616b2c-a177-4c66-9987-00bda9b51d70",
+      "name": "Format Data & Rename File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://bagandou_baserow/api/database/rows/table/300/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Host",
+              "value": "localhost:8080"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"field_2664\": \"{{ $('Format Data & Rename File').item.json.Nazwisko || '' }}\",\n  \"field_2665\": \"{{ $('Format Data & Rename File').item.json.Imie || '' }}\",\n  \"field_2673\": \"{{ $('Format Data & Rename File').item.json.Data_Urodzenia || '' }}\",\n  \"field_2676\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Urodzenia || '' }}\",\n  \"field_2667\": \"{{ $('Format Data & Rename File').item.json.Ojciec || '' }}\",\n  \"field_2668\": \"{{ $('Format Data & Rename File').item.json.Matka || '' }}\",\n  \"field_2669\": \"{{ $('Format Data & Rename File').item.json.Chrzestni || '' }}\",\n  \"field_2670\": \"{{ $('Format Data & Rename File').item.json.Numer || null }}\",\n  \"field_2671\": \"{{ $('Format Data & Rename File').item.json.Szafarz || '' }}\",\n  \"field_2666\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Chrztu || '' }}\",\n  \"field_2674\": \"{{ $('Format Data & Rename File').item.json.Data_Chrztu || '' }}\",\n  \"field_8109\": \"{{ $('Format Data & Rename File').item.json.Data_Komunii || '' }}\",\n  \"field_8111\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Komunii || '' }}\",\n  \"field_8110\": \"{{ $('Format Data & Rename File').item.json.Data_Bierzmowania || '' }}\",\n  \"field_8112\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Bierzmowania || '' }}\",\n  \"field_2672\": \"{{ $('Format Data & Rename File').item.json.Uwagi || '' }}\",\n  \"field_2675\": [\n    {\n      \"name\": \"{{ $('Upload Photo').item.json.name }}\"\n    }\n  ],\n  \"field_8149\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Zamieszkania || '' }}\",\n  \"field_8150\": \"{{ $('Format Data & Rename File').item.json.Data_Slubu || '' }}\",\n  \"field_8151\": \"{{ $('Format Data & Rename File').item.json.Miejsce_Slubu || '' }}\",\n  \"field_8152\": \"{{ $('Format Data & Rename File').item.json.Numer_Aktu_Slubu || '' }}\",\n  \"field_8153\": \"{{ $('Format Data & Rename File').item.json.Malzonek || '' }}\",\n  \"field_8154\": \"{{ $('Format Data & Rename File').item.json.Numer_Indeksu_Malzonka || '' }}\",\n  \"field_8155\": \"{{ $('Format Data & Rename File').item.json.Swiadek_Slubu || '' }}\"\n}\n",
+        "options": {}
+      },
+      "id": "88cd027d-d7a4-476c-b98a-fbbbc9b44ad2",
+      "name": "Create Parishioner Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        432,
+        208
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lWNzwL2wLXzVFfYr",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -720,
+        528
+      ],
+      "id": "2cf8e4c4-a82f-4b9c-8745-0b19977a9ee0",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ip0i2tvdZIu7XDJi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "`Przeanalizuj załączone zdjęcie dokumentu (metryki/karty parafialnej) i wyciągnij z niego dane wpisane pismem ręcznym. Twoim zadaniem jest zwrócenie danych w czystym formacie JSON, pasującym dokładnie do podanej struktury pól.\n\n### Zasady ekstrakcji:\n1. Zwróć WYŁĄCZNIE czysty obiekt JSON. Nie używaj znaczników \\`\\`\\`json i \\`\\`\\` ani żadnego tekstu wstępnego lub podsumowującego.\n2. Jeśli dane pole jest puste na karcie (zawiera tylko kropki), wpisz wartość null.\n3. Przepisz pismo ręczne dokładnie, zachowując wielkość liter (np. nazwiska drukowanymi). Przepisz daty dokładnie tak, jak zostały zapisane na karcie.\n4. JEŚLI na karcie znajdują się jakiekolwiek informacje, dopiski, adnotacje lub dodatkowe sakramenty, które NIE PASUJĄ do pól podstawowych, przepiszesz je do pola \"Uwagi\" DOKŁADNIE TAK, JAK ZAPISANO.\n5. BĄDŹ BARDZO OSTROŻNY PRZY ROKU CHRZTU (Bapt. le): Dokładnie przeanalizuj końcówkę roku w linii \"Bapt. le\". Często różni się ona od roku urodzenia (np. urodzenie to 2009, a chrzest to 2011). Bezwzględnie zakazuje się bezmyślnego kopiowania roku urodzenia do roku chrztu! Przepisz to, co fizycznie zapisano.\n6. UWAGA NA NUMER (N°): Jeśli pierwotny numer w prawym górnym rogu jest skreślony, zamazany lub poprawiony, przepisz WYŁĄCZNIE nowy, poprawiony numer (ten dopisany obok lub powyżej, np. 778). Nie łącz starego i nowego numeru w jeden ciąg tekstowy.\n7. OSTRZEŻENIE DOTYCZĄCE CYFR 9 I 8: Na niektórych kartach ogonki cyfr 9 są mocno zakrzywione do góry i zamknięte, przez co mogą wyglądać identycznie jak cyfra 8. Zwracaj uwagę na logikę wieku człowieka. Jeśli chrzest i komunia odbyły się w 2011 roku, a rok urodzenia wygląda jak 1988 lub 1888, oznacza to, że autor karty napisał rok 1999 (osoba miała wtedy 12 lat). W takim przypadku zwróć wartość 1999.\n8. UWAGA NA ZAPIS MIESIĘCY: Miesiące na kartach bywają zapisywane w formie dwóch odręcznych pionowych kresek (11 jako listopad). Nigdy nie interpretuj tych dwóch pionowych kresek jako litery \"M\". Jeśli widzisz zapis np. \"28.M.2009\", prawidłową wartością jest \"28.11.2009\".\n\n### Schemat struktury danych do uzupełnienia:\n{\n  \"Nazwisko\": \"Wpisz wartość z pola 'Nom' lub 'Noms'\",\n  \"Imie\": \"Wpisz wartość z pola 'Prénom'\",\n  \"Miejsce_Chrztu\": \"Wpisz wartość z pola 'A' znajdującego się bezpośrednio po 'Bapt. le'\",\n  \"Ojciec\": \"Wpisz wartość z pola 'Père'\",\n  \"Matka\": \"Wpisz wartość z pola 'Mère'\",\n  \"Chrzestni\": \"Wpisz wartość z pola 'Par' lub 'Parrain'\",\n  \"Numer\": \"Wpisz WYŁĄCZNIE aktualny, poprawiony numer z pola 'N°' (np. 778)\",\n  \"Szafarz\": \"Wpisz wartość z pola 'Ministre'\",\n  \"Uwagi\": \"Przepisz tutaj (dokładnie tak, jak zapisano na karcie) wszystkie adnotacje, dopiski, uwagi oraz informacje o innych sakramentach, które nie pasują do pozostałych pól. Jeśli brak dodatkowych zapisków, wpisz null.\",\n  \"Data_Urodzenia\": \"Wpisz wartość z pola 'Nais.' lub 'Né le' (dokładnie tak jak zapisano, np. 1945)\",\n  \"Data_Chrztu\": \"Wpisz wartość z pola 'Bapt. le' (analizuj uzmanie cyfry roku, przepisz dokładnie np. 25.12.2011)\",\n  \"Data_Komunii\": \"Wpisz wartość z pola '1: Com.' (dokładnie tak jak zapisano). Jeśli pole jest puste, wpisz null.\",\n  \"Miejsce_Komunii\": \"Wpisz nazwę miejscowości dopisaną po dacie przy sakramencie '1: Com.' (jeśli występuje, np. po słowie 'à'). Jeśli brak, wpisz null.\",\n  \"Data_Bierzmowania\": \"Wpisz wartość z pola 'Conf.' (dokładnie tak jak zapisano). Jeśli pole jest puste, wpisz null.\",\n  \"Miejsce_Bierzmowania\": \"Wpisz nazwę miejscowości dopisaną po dacie przy sakramencie 'Conf.' (jeśli występuje, np. po słowie 'à'). Jeśli brak, wpisz null.\",\n  \"Miejsce_Urodzenia\": \"Wpisz wartość z pola 'A' znajdującego się bezpośrednio po dacie urodzenia\",\n  \"Miejsce_Zamieszkania\": \"Wpisz wartość z pola 'Résidence' (jeśli występuje). Jeśli brak, wpisz null.\",\n  \"Data_Slubu\": \"Wpisz wartość z pola 'Mariage' (dokładnie tak jak zapisano). Jeśli pole jest puste, wpisz null.\",\n  \"Miejsce_Slubu\": \"Wpisz nazwę miejscowości dopisaną po dacie przy sakramencie 'Mariage' (po słowie 'A'). Jeśli brak, wpisz null.\",\n  \"Numer_Aktu_Slubu\": \"Wpisz numer z pola 'N°' znajdującego się w linii 'Mariage'. Jeśli brak, wpisz null.\",\n  \"Malzonek\": \"Wpisz wartość z pola 'Avec' (imię i nazwisko małżonka). Jeśli brak, wpisz null.\",\n  \"Numer_Indeksu_Malzonka\": \"Wpisz numer z pola 'N°' znajdującego się w linii 'Avec'. Jeśli brak, wpisz null.\",\n  \"Swiadek_Slubu\": \"Wpisz wartość z pola 'Devant' (imię i nazwisko świadka/osoby asystującej). Jeśli brak, wpisz null.\"\n}\n",
+        "options": {
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -720,
+        320
+      ],
+      "id": "9d6f6f52-fe18-46b8-892e-ae4c5a8049cd",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -448,
+        224
+      ],
+      "id": "39c0908d-594d-4b91-9984-9f85b04ef99f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dynamiczne generowanie znaku dolara, aby ominąć błędy platformy AI\nconst d = String.fromCharCode(36);\n\n// Pobieramy całą tablicę danych wejściowych z klocka Webhook\nconst allInputItems = eval(d + 'input.all()');\nif (!allInputItems || allInputItems.length === 0) {\n  return [];\n}\n\n// Mapujemy każdy element, usuwając plik XML i zostawiając tylko zdjęcie\nconst outputData = allInputItems.map(item => {\n  let cleanBinary = {};\n\n  if (item && item.binary) {\n    const keys = Object.keys(item.binary);\n    \n    // Szukamy klucza, który jest plikiem graficznym JPG lub JPEG\n    const imageKey = keys.find(k => k.toLowerCase().endsWith('.jpg') || k.toLowerCase().endsWith('.jpeg'));\n    \n    if (imageKey && item.binary[imageKey]) {\n      // Zostawiamy wyłącznie to zdjęcie\n      cleanBinary[imageKey] = item.binary[imageKey];\n    }\n  }\n\n  // Zwracamy oczyszczony element n8n\n  return {\n    json: item.json || {},\n    binary: Object.keys(cleanBinary).length > 0 ? cleanBinary : undefined\n  };\n});\n\nreturn outputData;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        208
+      ],
+      "id": "f89395ab-f9a5-404e-a54b-42a598ba1a2c",
+      "name": "Filter Image Only"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "039d8a58-3cc4-44e4-bc0b-f22d14a3b66d",
+              "leftValue": "={{ $('Get many rows from Baserow').item.json.count }}\n",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        224
+      ],
+      "id": "ba2fe6a5-9263-4771-a0a6-42abf1a8abf5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "=http://bagandou_baserow/api/database/rows/table/300/?filter__field_2670__equal={{ $('Format Data & Rename File').item.json.Numer }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Host",
+              "value": "localhost:8080"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fe9b2e5b-5f8d-4091-acff-ab60d28af744",
+      "name": "Get many rows from Baserow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        64,
+        224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lWNzwL2wLXzVFfYr",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://bagandou_baserow/api/user-files/upload-file/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Host",
+              "value": "localhost:8080"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "foto"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2dea9f0a-3ff8-4348-aada-72fbaac1b699",
+      "name": "Upload Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -112,
+        224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "lWNzwL2wLXzVFfYr",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<OpenRosaResponse xmlns=\"http://openrosa.org\">\n    <message>[SUKCES] Nowa karta została pomyślnie zapisana w bazie!</message>\n</OpenRosaResponse>\n",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-OpenRosa-Version",
+                "value": "1.0"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/xml; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        592,
+        208
+      ],
+      "id": "9d3539bf-d3be-4248-843f-58583e8a2f60",
+      "name": "Unique record"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<OpenRosaResponse xmlns=\"http://openrosa.org\">\n    <message>[ODRZUCONO] Ta karta już istnieje w bazie danych Baserow!</message>\n</OpenRosaResponse>\n",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-OpenRosa-Version",
+                "value": "1.0"
+              },
+              {
+                "name": "Content-Type",
+                "value": "text/plain; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        448,
+        496
+      ],
+      "id": "38c0b8b8-da09-4915-8024-0fc17270d891",
+      "name": "Duplicated record"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Image Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data & Rename File": {
+      "main": [
+        [
+          {
+            "node": "Upload Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Parishioner Record": {
+      "main": [
+        [
+          {
+            "node": "Unique record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait on Gemini Error": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Wait on Gemini Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Format Data & Rename File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Image Only": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Parishioner Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicated record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows from Baserow": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Photo": {
+      "main": [
+        [
+          {
+            "node": "Get many rows from Baserow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8c2bfacc-ee33-4ce5-aff3-452a99525c98",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "50506691dfd69ab121a96737d1fb04c94fb23403134579936c8d4cfa1908e6db"
+  },
+  "nodeGroups": [],
+  "id": "F3Ww2DZwYl2jr7IO",
+  "tags": []
+}

@@ -37,7 +37,7 @@ The environment is structured using localized Bind Mounts (`./dane_*`) to ensure
 
 ## 💾 Data Migration, Workflow & Schema Replication
 
-Since persistence directories are explicitly ignored by version control to maintain data privacy, you can replicate either your entire verified database via hardware storage or import templates directly through version-controlled structural files (`baserow_schema.json` and `workflow_bagandou.json`).
+Since persistence directories are explicitly ignored by version control to maintain data privacy, you can replicate either your entire verified database via hardware storage or import templates directly through version-controlled structural files (`baserow_schema.json` and `n8n_workflow.json`).
 
 ### 1. Exporting the Source Stack Data (On WSL2/Host)
 Before copying, bring down the active containers to safely close all database locks, then compress the live data volume:
@@ -68,10 +68,10 @@ docker compose -f docker-compose.rpi.yml up -d
 ```
 
 ### 3. Structural & Automation Imports (No Data)
-- **n8n Workflow**: Import `workflow_bagandou.json` directly through the n8n UI (*Import from file...*) and attach your local Gemini and Baserow credentials.
-- **Baserow Schema**: To rebuild the structural workspace (Workspace 73: "Kancelaria parafialna") and all its table column configurations without records, import `baserow_schema.json` inside the container:
+- **n8n Workflow**: Import `n8n_workflow.json` directly through the n8n UI (*Import from file...*) and attach your local Gemini and Baserow credentials.
+- **Baserow Schema**: To rebuild the structural workspace configurations without records, import the clean SQL structure file inside the container:
   ```bash
-  docker compose exec -T baserow ./baserow.sh backend-cmd manage import_workspace_applications 73 ./baserow_schema.json
+  docker compose exec -T postgres psql -U baserow -d baserow < struktura_baserow.sql
   ```
 
 ---
@@ -109,7 +109,7 @@ To repozytorium zawiera ujednolicony, gotowy do wdrożenia produkcyjnego szablon
 
 ## 💾 Migracja, Automatyzacja i Odtwarzanie Struktur
 
-Ponieważ katalogi z danymi produkcyjnymi są zablokowane przed wysyłką na GitHub, możesz odtworzyć system na Malince za pomocą fizycznego nośnika lub zaimportować gotowe schematy bez danych z repozytorium (`baserow_schema.json` oraz `workflow_bagandou.json`).
+Ponieważ katalogi z danymi produkcyjnymi są zablokowane przed wysyłką na GitHub, możesz odtworzyć system na Malince za pomocą fizycznego nośnika lub zaimportować gotowe schematy bez danych z repozytorium (`baserow_schema.json` oraz `n8n_workflow.json`).
 
 ### 1. Eksportowanie danych (Na WSL2 / Komputerze testowym)
 Przed kopiowaniem wyłącz kontenery, aby bezpiecznie zamknąć i zapisać pliki bazy danych, a następnie spakuj folder:
@@ -140,8 +140,8 @@ docker compose -f docker-compose.rpi.yml up -d
 ```
 
 ### 3. Odtwarzanie szablonów automatyzacji (Bez danych)
-- **Przepływ n8n**: Zaimportuj plik `workflow_bagandou.json` bezpośrednio w panelu n8n (*Import from file...*) i podepnij pod klocki swoje własne dane uwierzytelniające (credentials).
-- **Schemat Baserow**: Aby odbudować strukturę przestrzeni roboczej (Workspace 73: "Kancelaria parafialna") i konfigurację kolumn tabeli bez rekordów, zaimportuj plik `baserow_schema.json` wewnątrz kontenera:
+- **Przepływ n8n**: Zaimportuj plik `n8n_workflow.json` bezpośrednio w panelu n8n (*Import from file...*) i podepnij pod klocki swoje własne dane uwierzytelniające (credentials).
+- **Struktura Baserow**: Aby odbudować pustą strukturę bazy danych i konfigurację kolumn bez wgrywania rekordów, zaimportuj czysty plik SQL bezpośrednio do kontenera bazy:
   ```bash
-  docker compose exec -T baserow ./baserow.sh backend-cmd manage import_workspace_applications 73 ./baserow_schema.json
+  docker compose exec -T postgres psql -U baserow -d baserow < struktura_baserow.sql
   ```

@@ -27,7 +27,6 @@ logs/
 *.tgz
 *.zip
 *.gz
-*.sql
 
 # --- Śmieci systemowe i sieciowe ---
 # Blokuje metadane Windows (w tym WSL), macOS oraz miniatury
@@ -43,3 +42,4 @@ desktop.ini
 .idea/
 *.suo
 *.ntvs*
+backups_kopie/
