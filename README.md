@@ -47,7 +47,7 @@ This project was designed, built, and field-tested on-site in **Bagandou and Bou
 **This software and its AI Agent Skill are 100% free and open-source.**  
 If this architecture saved you engineering time or inspired your own *offline-first* deployment, please consider supporting our humanitarian fundraiser organized with **Fundacja Dzieci Afryki** (Children of Africa Foundation):
 
-👉 **[Support the Mission: Milk & Nutrition for Children in CAR (zrzutka.pl/4cn8ft)](https://zrzutka.pl)**
+👉 **[Support the Mission: Milk & Nutrition for Children in CAR (zrzutka.pl/4cn8ft)](https://zrzutka.pl/4cn8ft)**
 
 * **25 PLN (~$6 USD):** Provides infant formula milk for a malnourished baby.
 * **150 PLN (~$38 USD):** Supplies a week's worth of rice (*popoto*) for a local kindergarten.
@@ -108,7 +108,7 @@ Ten projekt został zaprojektowany, zbudowany i wdrożony produkcyjnie na miejsc
 **To oprogramowanie oraz jego umiejętność (Skill) dla agentów AI są w 100% darmowe i otwarte (Open Source).**  
 Jeśli ta architektura zaoszczędziła Ci czas pracy lub zainspirowała Twoje własne wdrożenie *offline-first*, zachęcam do wsparcia naszej zbiórki charytatywnej prowadzonej wspólnie z **Fundacją Dzieci Afryki**:
 
-👉 **[Wesprzyj misję: Mleko i dożywianie dzieci w RŚA (zrzutka.pl/4cn8ft)](https://zrzutka.pl)**
+👉 **[Wesprzyj misję: Mleko i dożywianie dzieci w RŚA (zrzutka.pl/4cn8ft)](https://zrzutka.pl/4cn8ft)**
 
 * **25 PLN:** Puszka mleka modyfikowanego dla niedożywionego niemowlęcia.
 * **150 PLN:** Tygodniowy zapas ryżu (*popoto*) dla lokalnego przedszkola.
