@@ -40,6 +40,22 @@ Data persistence relies on local bind mounts (`./dane_*`) stored on a **Btrfs RA
    ```bash
    docker compose -f docker-compose.rpi.yml exec -T bagandou-db psql -U bagandou_admin -d baserow < struktura_baserow.sql
    ```
+## 🌍 Humanitarian Background & Support the Mission
+
+This project was designed, built, and field-tested on-site in **Bagandou and Bouar (Central African Republic)** during missionary deployments in 2025–2026 (in partnership with **Fundacja Dzieci Afryki** and the **Missionary Department of the Diocese of Tarnów**) to support local communities in off-grid, low-bandwidth conditions.
+
+**This software and its AI Agent Skill are 100% free and open-source.**  
+If this architecture saved you engineering time or inspired your own *offline-first* deployment, please consider supporting our humanitarian fundraiser organized with **Fundacja Dzieci Afryki** (Children of Africa Foundation):
+
+👉 **[Support the Mission: Milk & Nutrition for Children in CAR (zrzutka.pl/4cn8ft)](https://zrzutka.pl)**
+
+* **25 PLN (~$6 USD):** Provides infant formula milk for a malnourished baby.
+* **150 PLN (~$38 USD):** Supplies a week's worth of rice (*popoto*) for a local kindergarten.
+* *(The fundraiser page accepts international credit/debit cards as well as Apple Pay and Google Pay).*
+
+**Author & Corporate Partnerships:**  
+Built by **Piotr Kołodziejski** (Senior QA Engineer, Certified TOGAF 9, ICT4D Solution Architect).  
+Looking to collaborate, discuss *offline-first* / QA architectures, or sponsor upcoming humanitarian deployments (Edge Computing / Starlink / RACHEL5) as a Technology Partner? Connect with me on **[LinkedIn](https://www.linkedin.com/in/piotr-ko%C5%82odziejski-94a8012/?locale=en-US)**.
 
 ---
 
@@ -85,3 +101,18 @@ Dane aplikacji przechowywane są w lokalnych katalogach (`./dane_*`) na macierzy
    ```bash
    docker compose -f docker-compose.rpi.yml exec -T bagandou-db psql -U bagandou_admin -d baserow < struktura_baserow.sql
    ```
+## 🌍 Kontekst humanitarny i wsparcie misji
+
+Ten projekt został zaprojektowany, zbudowany i wdrożony produkcyjnie na miejscu w **Bagandou i Bouar (Republika Środkowoafrykańska)** podczas wyjazdów misyjnych w latach 2025–2026 (we współpracy z **Fundacją Dzieci Afryki** oraz **Wydziałem Misyjnym Diecezji Tarnowskiej**), aby wspierać lokalne społeczności w warunkach braku stabilnego zasilania i ograniczonego dostępu do internetu.
+
+**To oprogramowanie oraz jego umiejętność (Skill) dla agentów AI są w 100% darmowe i otwarte (Open Source).**  
+Jeśli ta architektura zaoszczędziła Ci czas pracy lub zainspirowała Twoje własne wdrożenie *offline-first*, zachęcam do wsparcia naszej zbiórki charytatywnej prowadzonej wspólnie z **Fundacją Dzieci Afryki**:
+
+👉 **[Wesprzyj misję: Mleko i dożywianie dzieci w RŚA (zrzutka.pl/4cn8ft)](https://zrzutka.pl)**
+
+* **25 PLN:** Puszka mleka modyfikowanego dla niedożywionego niemowlęcia.
+* **150 PLN:** Tygodniowy zapas ryżu (*popoto*) dla lokalnego przedszkola.
+
+**Autor i partnerstwa technologiczne (CSR):**  
+Projekt stworzył **Piotr Kołodziejski** (Senior QA Engineer, Certified TOGAF 9, ICT4D Solution Architect).  
+Chcesz porozmawiać o architekturze *offline-first* / QA lub zostać Partnerem Technologicznym kolejnych wdrożeń humanitarnych (Edge Computing / Starlink / RACHEL5)? Zapraszam do kontaktu na **[LinkedIn](https://www.linkedin.com/in/piotr-ko%C5%82odziejski-94a8012/?locale=pl-PL)**.
