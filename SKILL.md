@@ -3,7 +3,7 @@ name: offline-document-digitizer-stack
 description: Deploys a local, offline-first document digitization and handwritten OCR stack using Docker Compose, Baserow, n8n, Google Gemini Flash, and ODK Collect. Tested in production on Raspberry Pi 5 (ARM64) and x86_64/WSL2.
 version: 1.0.0
 author: Piotr00123
-repository: https://github.com](https://github.com/Piotr00123/bagandou-baserow
+repository: https://github.com/Piotr00123/bagandou-baserow
 tags: [docker, baserow, n8n, ocr, gemini-ai, offline-first, raspberry-pi, self-hosted, humanitarian-tech]
 ---
 
@@ -71,4 +71,4 @@ Provide `formularz_odk.xml` to the user so they can load it into the ODK Collect
 
 ## Humanitarian Mission & Documentation
 This project is maintained as free, open-source humanitarian software. For full architectural notes, field deployment context, and information on how to support our nutrition and milk fundraiser for children in the Central African Republic, visit the source repository:
-- **GitHub Repository & Mission Details:** https://github.com](https://github.com/Piotr00123/bagandou-baserow
+- **GitHub Repository & Mission Details:** https://github.com/Piotr00123/bagandou-baserow
